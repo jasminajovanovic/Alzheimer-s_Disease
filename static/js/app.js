@@ -1,13 +1,12 @@
 function displayReport(modelStats) {
-
+// takes plotly trace and creates graph
   d3.select("#status").text("")
-  // d3.select('#fitext').text("")
-  // d3.select("classtestxt").text("")
 
   data = modelStats['data']
   layout = modelStats['layout']
   Plotly.newPlot("roc_curve", data, layout)
 
+  // optionally, if available, display cross validation score boxplot
   if (modelStats['cv']){
     cvdata = modelStats['cvaccdata']
     Plotly.newPlot("cv-boxplot", cvdata)
@@ -16,7 +15,7 @@ function displayReport(modelStats) {
 
   const classReport = modelStats['class_report']
 
-  console.log(classReport);
+  //console.log(classReport);
 
   var f = d3.format(".3f");
 
@@ -45,11 +44,9 @@ function displayReport(modelStats) {
       row.append('td').text(f(value.support))
     }
   }
-console.log(`modelstats features are ${modelStats['features'][0]}`)
-console.log(modelStats['features']);
+// optionally, if available, display features sorted by importance
   if (!("-1" in  modelStats['features'])){
     let header = d3.select('#features')
-    // .text('Feature Importance').property('id', 'fitext')
     .append('table').property('id', 'features-table')
     .append('thead')
     header.append('td').text('Feature')
@@ -63,10 +60,8 @@ console.log(modelStats['features']);
 
     sorted.sort();
     sorted.reverse();
-    // console.log(`features are: ${sorted}`)
 
     for (var i = 0; i < sorted.length; i++) {
-        //Do something
         key = sorted[i]
         value = features[key]
         console.log(`key ${key}: ${value}`);
@@ -75,8 +70,7 @@ console.log(modelStats['features']);
         row.append('td').text(f(key))
     }
 
-
-    // d3.select('#tree-image-caption').text("Sample random tree")
+    // reveal a sample random tree
     d3.select('#tree-image').attr("class",'unhidden')
   }
 
@@ -86,6 +80,7 @@ console.log(modelStats['features']);
 function clear_screen(){
   d3.select('#features-table').remove()
   d3.select('#class-table').remove()
+  // hide sample random tree
   d3.select('#tree-image').attr("class",'hidden')
   d3.select('#cv-boxplot').attr("class", 'hidden')
 }
@@ -94,10 +89,9 @@ async function selectionChanged () {
   clear_screen()
 
   const dict  = {}
-  // clear LogisticRegression
+  // clear graph
   d3.select('#status').text("Collecting data...")
   d3.select('#roc_curve').text("")
-  // d3.select('#class_report').text("")
 
   // create dictionary of user selection
   dict['model'] = d3.select('#model').property('value')

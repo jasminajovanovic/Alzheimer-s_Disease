@@ -37,6 +37,12 @@ debug = 1
 
 
 def cleanup_data(dataset_name, df, drop, prediction):
+    """ Takes in dataset name, dataframe, NA handling, feature to predict and
+        cleans up the data, optionally drops rows with NA, removes rows with
+        infrequent Diagnosis
+
+        Returns cleaned up df
+    """
     df = df.replace(r'^\s*$', np.nan, regex=True)
 
     if debug:
@@ -77,8 +83,6 @@ def cleanup_data(dataset_name, df, drop, prediction):
     if prediction == 'DX':
         df = df.loc[(df['DX'] == 'MCI') | (
             df['DX'] == 'Dementia') | (df['DX'] == 'NL')]
-    if debug:
-        print("in cleanup_data 1")
     elif prediction == 'final_DX':
         df = df.loc[(df['final_DX'] == 'MCI') | (
             df['final_DX'] == 'Dementia') | (df['final_DX'] == 'NL')]
@@ -86,7 +90,6 @@ def cleanup_data(dataset_name, df, drop, prediction):
     df = df.loc[:, columns]
     if debug:
         print("in cleanup_data 2, df prevew ", df.head())
-    if debug:
         print("df size ", df.shape)
 
     if drop:
@@ -94,17 +97,21 @@ def cleanup_data(dataset_name, df, drop, prediction):
     else:
         df.fillna(value=0, inplace=True)
 
-    print("in clean_data 3, dropped all but ", df.shape[0], ' rows')
-
     if debug:
+        print("in clean_data 3, dropped all but ", df.shape[0], ' rows')
         print("df preview2: ", df.head(2))
-
-    if debug:
         print(df[prediction].value_counts())
+
     return df
 
 
 def create_new_dataset(dataset_name, prediction):
+    """ Implements caching of input files for better performance
+        Takes in in data set name (feature set) and prediction, generates new
+        output dataset file
+
+        Writes output file in csv format
+    """
     if prediction == 'DX':
         raw_data = os.path.join('Data', 'raw_data_subset' + '.csv')
     elif prediction == 'final_DX':
@@ -134,22 +141,25 @@ def create_new_dataset(dataset_name, prediction):
 
 
 def get_data(dataset_name, prediction, **kwargs):
+    """ Takes name of dataset (feature set), prediction and
+        arguments for oversampling, scaling, split and boolean scale_X
+
+        Expects input csv file, named according to feature selection
+        Generates X, y, test/train split
+        Performs scaling, oversampling
+
+        Returns X_train, X_test, y_train, y_test, columns, X, y
+    """
 
     oversampling = kwargs.get('oversampling')
     scaling = kwargs.get('scaling')
     split = kwargs.get('split')
     scale_X = kwargs.get('scale_X')
 
-    # if len(args):
-    #     to_oversample = 1
-    #     oversampling = args[0]
-
     filename = os.path.join('Data', dataset_name + '.csv')
 
     if debug:
         print("dataset", dataset_name, " exists")
-
-    # X_train, X_test, y_train, y_test = []
 
     df = pd.read_csv(filename)
 
@@ -169,26 +179,34 @@ def get_data(dataset_name, prediction, **kwargs):
 
 
 def dataset_exists(dataset_name):
+    """ Takes dataset name (feature list) and checks if data file already exists
+        Returns 1 if dataset exists, 0 otherwise
+    """
     if path.isfile(os.path.join('Data', dataset_name + '.csv')):
         return 1
     return 0
 
 
 def model_exists(model_name):
+    """ Takes model name as input and checks if model file already exists
+        Returns 1 if it exists, 0 otherwise
+    """
     if path.isfile(os.path.join('Models', model_name + '.sav')):
         return 1
     return 0
 
 
 def load_model(model_name):
-    # TODO: if model is not dnn load .sav file; otherwise, load dnn file(s)
+    """ Takes model name as input, loads pickled model from file
+        Returns model
+    """
     model_file = os.path.join('Models', model_name + '.sav')
     print("Looking for file: ", model_file)
     if not 'dnn' in model_name:
         model = pickle.load(open(model_file, 'rb'))
     return model
 
-#
+# code for DNN for reference
 # def build_NN_builder(dim):
 #     from keras.models import Sequential
 #     from keras.wrappers.scikit_learn import KerasClassifier
@@ -233,6 +251,10 @@ def load_model(model_name):
 
 
 def train_model(model_name, X_train, y_train):
+    """ Takes in model name, X_train and y_train
+        Trains new model with default parameters
+        Pickles and writes model out to a file
+    """
     model_file = os.path.join('Models', model_name + '.sav')
     if debug:
         print("Training new model: ", model_name)
@@ -261,8 +283,11 @@ def train_model(model_name, X_train, y_train):
 
 
 def cross_validate(model_name, X, y):
+    """ Takes in model name, X and y
+        Creates pipline, performs cross validation (n=5)
+        Returns accuracy, precision, recall, f1
+    """
 
-    # y = y.reset_index()
     y = y.as_matrix()
 
     kf = KFold(n_splits=5, random_state=42)
@@ -291,7 +316,6 @@ def cross_validate(model_name, X, y):
 
             X_train, X_test = X[train_indices], X[test_indices]
             y_train, y_test = y[train_indices], y[test_indices]
-            # y_train, y_test = y[1293:6460], y[0:1292]
 
             if 'smote' in model_name.lower():
                 pipeline = make_pipeline_imb(SMOTE(), classifier)
@@ -302,11 +326,7 @@ def cross_validate(model_name, X, y):
             if debug:
                 print("in cross_validate: 2, size of X_train, y_train: ",
                       len(X_train), len(y_train))
-            #     print("train size, test size: ", len(
-            #         train_indices), len(test_indices))
             model = pipeline.fit(X_train, y_train)
-            # if debug:
-            #     print("pipeline returns: ", pipeline.transform(X_train))
             prediction = model.predict(X_test)
 
             accuracy.append(pipeline.score(X_test, y_test))
@@ -321,10 +341,11 @@ def cross_validate(model_name, X, y):
         print("X[train] is: ", X_train)
         print("Y[train] is: ",  y_train)
 
-    print(f"k-fold accuracy: {accuracy}")
-    print(f"k-fold recall: {recall}")
-    print(f"k-fold precision: {precision}")
-    print(f"k-fold f1: {f1}")
+    if debug:
+        print(f"k-fold accuracy: {accuracy}")
+        print(f"k-fold recall: {recall}")
+        print(f"k-fold precision: {precision}")
+        print(f"k-fold f1: {f1}")
     return accuracy, precision, recall, f1
 
 
@@ -350,6 +371,12 @@ def visualize_tree(model, feature_list):
 
 
 def eval_and_report(model, X_test, y_test, size, X_features, X, y, *args):
+    """ Takes in model, X_test, y_test, size, X_features, X, y, optional
+        cv accuracy array
+        Calls to evaluate_model and generates results dictionary
+        Returns response dictionary
+    """
+    # TODO: refactor this code, separate evaluation from reporting
     cv = 0
 
     cv_accuracy_arr = []
@@ -432,11 +459,17 @@ def eval_and_report(model, X_test, y_test, size, X_features, X, y, *args):
         visualize_tree(model, X_features)
     except Exception as e:
         print('error saving png file: ', e)
-    # print("returning to js: ", jsonify(response))
     return (response)
 
 
 def evaluate_model(model, X_test, y_test, X_features, X, y):
+    """ Takes in model, X_test, y_test, X_features, X and y
+        evaluates model and generates score, classification report,
+        roc_auc, featues sorted by improtance, fpr and tpr
+
+        Returns metrics dictionary with keys: score, classification report,
+        roc_auc, featues sorted by improtance, fpr and tpr
+    """
 
     score = round(model.score(X_test, y_test), 4)
     predictions = model.predict(X_test)
@@ -464,6 +497,10 @@ def evaluate_model(model, X_test, y_test, X_features, X, y):
 
 
 def return_roc(y_test, y_score):
+    """ Takes in y_test, y_score
+        Calculates area under ROC curve, fpr and tpr
+        Returns roc_auc, fpr, tpr
+    """
     classes = ['Dementia', 'MCI', 'NL']
     y_bin = label_binarize(y_test, classes=['Dementia', 'MCI', 'NL'])
     n_classes = 3
@@ -526,6 +563,10 @@ def show_data(df, category):
 
 
 def populate_X_y(df, y_cat, encode_list):
+    """ Takes in df, y category, list of features to be encoded
+        encodes features
+        Returns X, y
+    """
     y = df[y_cat]
     X = df.drop(columns=[y_cat, 'PTID'])
     label_encoder = LabelEncoder()
@@ -546,6 +587,11 @@ def myPCA(X_train, X_test):
 
 
 def scale_features(scaler, X_train, *args):
+    """ Takes in scaler (type of scaling), X training data set,
+        and optionally X_test data
+        Scales data
+        Returns scaled X_train and optionally scaled X_test
+    """
 
     X_test_exists = 0
 
@@ -569,7 +615,10 @@ def scale_features(scaler, X_train, *args):
 
 
 def oversample(alg, X_train, y_train):
-    # print('in oversample got ', X_train, y_train)
+    """ Takes in oversampling type (smote or random), X_train and y_train
+        Performs oversampling
+        Returns oversampled X_trainm, y_train
+    """
     if alg == 'smote':
         smt = SMOTE()
         X_train, y_train = smt.fit_sample(X_train, y_train)
@@ -580,5 +629,3 @@ def oversample(alg, X_train, y_train):
         X_train, y_train = ros.fit_sample(X_train, y_train)
         # print('Resampled dataset shape %s' % Counter(y_train))
         return X_train, y_train
-
-# def save_model()

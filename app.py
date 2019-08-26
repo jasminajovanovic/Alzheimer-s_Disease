@@ -2,7 +2,6 @@ from flask import Flask, jsonify, render_template, request
 import ad_tools as adt
 import plotly
 import json
-# from plotly import plotly
 
 app = Flask(__name__)
 
@@ -16,7 +15,12 @@ def diseases():
 
 @app.route("/getdata/<dict>")
 def getdata(dict):
-    #  remove tree image file
+    """ Takes in dictionary of requested features and target prediction
+        Generates data set if one doesn't exist
+        Generates (trains) model if doesn't exist
+        Evaluates model
+        Returns response from eval_and_report in JSON format
+    """
     result = json.loads(dict)
     oversampling = result['oversampling']
     scaling = result['scaling']
@@ -62,10 +66,6 @@ def getdata(dict):
 
     model = adt.load_model(model_name)
 
-    # if debug:
-    #     print("in getdata: y_train: ",  y_train)
-    #     print("in getdata: y_test: ",  y_test)
-
     if cross_validate:
         # get cv_accuracy and pass it to eval_and_report
         cv_accuracy,  precision, recall, f1 = adt.cross_validate(
@@ -87,11 +87,6 @@ def methodology():
 @app.route('/models', methods=['POST', 'GET'])
 def models():
     return render_template("models.html")
-
-#
-# @app.route("/data")
-# def data():
-#     return render_template("data.html")
 
 
 @app.route("/resources")

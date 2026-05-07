@@ -1,5 +1,8 @@
 # Alzheimer's Disease Classification
 
+<img width="1891" height="885" alt="image" src="https://github.com/user-attachments/assets/51a5220b-71b3-4f6e-8921-39c7404c6642" />
+
+
 A machine learning web application that predicts Alzheimer's disease progression — classifying patients as **Dementia**, **Mild Cognitive Impairment (MCI)**, or **Normal (NL)** — using clinical, neuroimaging, genetic, and biomarker data.
 
 ## Overview
